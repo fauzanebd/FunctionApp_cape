@@ -1,11 +1,8 @@
 import logging
 import os
 import azure.functions as func
-from DatabaseFunction.databaseFunctions import delete_user
+from DatabaseFunction.databaseFunctions import delete_user, create_container
 
-import azure.cosmos.cosmos_client as cosmos_client
-import azure.cosmos.exceptions as exceptions
-from azure.cosmos.partition_key import PartitionKey
 
 config = {
     "ENDPOINT": os.environ['COSMOS_URI'],
@@ -20,15 +17,10 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
 
     try:
-        client = cosmos_client.CosmosClient(config['ENDPOINT'], {'masterKey': config['MASTERKEY']})
-        db = client.create_database_if_not_exists(id=config['DATABASE_ID'])
-        container = db.create_container_if_not_exists(id=config['CONTAINER_ID'], partition_key=PartitionKey(path="/id"))
-    except exceptions.CosmosHttpResponseError as e:
+        container = create_container(config)
+    except Exception as e:
         logging.error(f'Cosmos DB connection error: {e}')
         return func.HttpResponse(f'Cosmos DB connection error: {e}', status_code=500)
-    except Exception as e:
-        logging.error(f'Unknown error: {e}')
-        return func.HttpResponse(f'Unknown error: {e}', status_code=500)
 
     id = req.params.get('id')
     logging.info(f'id: {id}')
